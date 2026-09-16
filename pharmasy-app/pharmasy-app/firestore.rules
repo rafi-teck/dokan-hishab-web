@@ -1,0 +1,13 @@
+// Firebase Console > Build > Firestore Database > Rules ট্যাবে গিয়ে এই কোড পেস্ট করে "Publish" চাপুন।
+// এই অ্যাপে কোনো ইউজার-লগইন (Firebase Auth) যুক্ত নেই, তাই ডেটা "shopData" কালেকশনে সবার জন্য
+// খোলা থাকবে — লিংক যার কাছেই যাবে সে পড়তে/লিখতে পারবে। এটা একটা ছোট, একক-দোকানের প্রিভিউ/
+// ব্যবহারিক সেটআপের জন্য ঠিক আছে, কিন্তু আসলেই নিরাপত্তা দরকার হলে ভবিষ্যতে Firebase Auth
+// যোগ করে rules-এ request.auth চেক বসাতে হবে।
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /shopData/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

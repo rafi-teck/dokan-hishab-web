@@ -3156,12 +3156,10 @@ const SINGLE_SHOP_CODE = "MAIN-SHOP";
 // অ্যাপ খুলতে না পারে। এখানেই বদলে নিন:
 const APP_LOGIN_USERNAME = "malik";
 const APP_LOGIN_PASSWORD = "dokan2026";
-const APP_UNLOCK_KEY = "dokan_hishab_unlocked_v1";
 
 function AppLoginGate({ children }) {
-  const [unlocked, setUnlocked] = useState(() => {
-    try { return localStorage.getItem(APP_UNLOCK_KEY) === "yes"; } catch { return false; }
-  });
+  // প্রতিবার পেজ খোলা/রিফ্রেশ করলেই আবার লগইন চাইবে — কোনো কিছু "মনে রাখা" হবে না।
+  const [unlocked, setUnlocked] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -3169,7 +3167,6 @@ function AppLoginGate({ children }) {
   function tryLogin(e) {
     e && e.preventDefault();
     if (username.trim() === APP_LOGIN_USERNAME && password === APP_LOGIN_PASSWORD) {
-      try { localStorage.setItem(APP_UNLOCK_KEY, "yes"); } catch {}
       setUnlocked(true);
       setError("");
     } else {

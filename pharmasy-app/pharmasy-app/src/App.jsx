@@ -3151,6 +3151,64 @@ function ShopLogin({ onSuccess }) {
 // আগে মাল্টি-ব্রাঞ্চ সাপোর্টের জন্য ShopGate কম্পোনেন্ট একটা কোড চাইতো, সেটা বাদ দিয়ে
 // এখন একটা ফিক্সড শপ-কোড সরাসরি ব্যবহার করা হচ্ছে — অ্যাপ খুললেই সরাসরি দোকানে ঢুকে যাবে।
 const SINGLE_SHOP_CODE = "MAIN-SHOP";
+
+// ---------- সাইট-ওয়াইড লগইন লক ----------
+// এটা একটা সহজ, সবার জন্য একই ইউজারনেম/পাসওয়ার্ড লক — লিংক পেলেই যেন যে কেউ সরাসরি
+// অ্যাপ খুলতে না পারে। এখানেই বদলে নিন:
+const APP_LOGIN_USERNAME = "malik";
+const APP_LOGIN_PASSWORD = "dokan2026";
+const APP_UNLOCK_KEY = "dokan_hishab_unlocked_v1";
+
+function AppLoginGate({ children }) {
+  const [unlocked, setUnlocked] = useState(() => {
+    try { return localStorage.getItem(APP_UNLOCK_KEY) === "yes"; } catch { return false; }
+  });
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  function tryLogin(e) {
+    e && e.preventDefault();
+    if (username.trim() === APP_LOGIN_USERNAME && password === APP_LOGIN_PASSWORD) {
+      try { localStorage.setItem(APP_UNLOCK_KEY, "yes"); } catch {}
+      setUnlocked(true);
+      setError("");
+    } else {
+      setError("ইউজারনেম বা পাসওয়ার্ড ভুল হয়েছে");
+    }
+  }
+
+  if (unlocked) return children;
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center p-6">
+      <form onSubmit={tryLogin} className="w-full max-w-sm border-2 p-6" style={{ borderColor: "var(--ink)", background: "var(--paper)" }}>
+        <div className="text-center mb-5">
+          <Store size={28} style={{ color: "var(--stamp)" }} className="mx-auto mb-2" />
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 22 }}>দোকানের হিসাব</div>
+          <div className="text-sm mt-1" style={{ color: "var(--ink-faint)" }}>ঢুকতে ইউজারনেম ও পাসওয়ার্ড দিন</div>
+        </div>
+        <div className="flex flex-col gap-2 mb-2">
+          <input
+            autoFocus className="field" placeholder="ইউজারনেম"
+            value={username} onChange={(e) => { setUsername(e.target.value); setError(""); }}
+          />
+          <input
+            type="password" className="field" placeholder="পাসওয়ার্ড"
+            value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }}
+          />
+        </div>
+        {error && <div className="text-sm mb-2" style={{ color: "var(--stamp)" }}>{error}</div>}
+        <button type="submit" className="ledger-btn ledger-btn-solid w-full justify-center mt-2">ঢুকুন</button>
+      </form>
+    </div>
+  );
+}
+
 export default function App() {
-  return <DokanApp shopCode={SINGLE_SHOP_CODE} onShopLogout={undefined} />;
+  return (
+    <AppLoginGate>
+      <DokanApp shopCode={SINGLE_SHOP_CODE} onShopLogout={undefined} />
+    </AppLoginGate>
+  );
 }

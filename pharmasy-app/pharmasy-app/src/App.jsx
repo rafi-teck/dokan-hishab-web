@@ -411,7 +411,6 @@ function LedgerLines() {
 // ---------- login ----------
 function LoginScreen({ shopName, setShopName, employees, setEmployees, onEnter, onShopLogout }) {
   const [editingName, setEditingName] = useState(false);
-  const [newEmp, setNewEmp] = useState("");
   const [pinFor, setPinFor] = useState(null); // যেই employee এর pin চাওয়া হচ্ছে
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
@@ -420,7 +419,12 @@ function LoginScreen({ shopName, setShopName, employees, setEmployees, onEnter, 
     setPinFor(e); setPinInput(""); setPinError("");
   }
   function submitPin() {
-    if (pinInput === (pinFor.pin || "0000")) {
+    if (!pinFor.pin) {
+      setPinError("এই নামের জন্য এখনো পিন/পাসওয়ার্ড সেট করা হয়নি — মালিককে বলুন 'কর্মচারী' ট্যাব থেকে পিন সেট করে দিতে।");
+      playErrorSound();
+      return;
+    }
+    if (pinInput === pinFor.pin) {
       playSuccessSound();
       onEnter(pinFor);
     } else {
@@ -476,12 +480,7 @@ function LoginScreen({ shopName, setShopName, employees, setEmployees, onEnter, 
               </button>
             ))}
           </div>
-          <div className="flex gap-2">
-            <input className="field" placeholder="নতুন নাম যোগ করুন…" value={newEmp} onChange={(e) => setNewEmp(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && newEmp.trim()) { setEmployees([...employees, { id: uid(), name: newEmp.trim(), role: "staff", pin: "0000" }]); setNewEmp(""); } }} />
-            <button className="ledger-btn" onClick={() => { if (!newEmp.trim()) return; setEmployees([...employees, { id: uid(), name: newEmp.trim(), role: "staff", pin: "0000" }]); setNewEmp(""); }}><Plus size={18} /></button>
-          </div>
-          <div className="text-xs mt-2" style={{ color: "var(--ink-faint)" }}>নতুন যোগ করা কর্মচারীর ডিফল্ট পিন থাকবে <b>0000</b> — কর্মচারী ট্যাব থেকে বদলে নিন।</div>
+          <div className="text-xs mt-2" style={{ color: "var(--ink-faint)" }}>নতুন কর্মচারী শুধু মালিক 'কর্মচারী' ট্যাব থেকে যোগ করতে পারবেন — এই স্ক্রিন থেকে কেউ নিজে নিজে যোগ হতে পারবে না।</div>
         </div>
         {onShopLogout && (
           <div className="text-center mt-4">
@@ -1352,7 +1351,7 @@ function SalesTab({ products, setProducts, sales, setSales, returns, setReturns,
   const needsOwnerApproval = !isOwner && disc > 0 && discPercent >= discountPinLimit && !pinApprovedBy;
 
   function verifyOwnerPin() {
-    const owner = employees.find((e) => e.role === "owner" && (e.pin || "0000") === pinInput);
+    const owner = employees.find((e) => e.role === "owner" && e.pin && e.pin === pinInput);
     if (owner) {
       setPinApprovedBy(owner.name); setPinPrompt(false); setPinInput(""); setPinError("");
       playSuccessSound();
@@ -2774,7 +2773,7 @@ function EmployeesTab({ employees, setEmployees, pushToast, logActivity = () => 
         ))}
         <div className="flex gap-2 p-4" style={{ borderTop: "2px solid var(--ink)" }}>
           <input className="field" placeholder="নতুন কর্মচারীর নাম" value={name} onChange={(e) => setName(e.target.value)} />
-          <button className="ledger-btn ledger-btn-navy" onClick={() => { if (!name.trim()) return; const newId = uid(); setEmployees([...employees, { id: newId, name: name.trim(), role: "staff", pin: "0000" }]); setName(""); pushToast("কর্মচারী যোগ হয়েছে ✓ (ডিফল্ট পিন 0000)"); logActivity("employee_add", `${name.trim()}`, { refId: newId }); }}>যোগ করুন</button>
+          <button className="ledger-btn ledger-btn-navy" onClick={() => { if (!name.trim()) return; const newId = uid(); setEmployees([...employees, { id: newId, name: name.trim(), role: "staff", pin: "" }]); setName(""); pushToast("কর্মচারী যোগ হয়েছে ✓ — এখনই নিচে 'পিন বদলান' চেপে একটা পিন সেট করে দিন, নাহলে সে লগইন করতে পারবে না"); logActivity("employee_add", `${name.trim()}`, { refId: newId }); }}>যোগ করুন</button>
         </div>
       </div>
     </div>

@@ -3163,6 +3163,7 @@ function AppLoginGate({ children }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [shake, setShake] = useState(false);
 
   function tryLogin(e) {
     e && e.preventDefault();
@@ -3171,31 +3172,100 @@ function AppLoginGate({ children }) {
       setError("");
     } else {
       setError("ইউজারনেম বা পাসওয়ার্ড ভুল হয়েছে");
+      setShake(true);
+      setTimeout(() => setShake(false), 420);
     }
   }
 
   if (unlocked) return children;
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-6">
-      <form onSubmit={tryLogin} className="w-full max-w-sm border-2 p-6" style={{ borderColor: "var(--ink)", background: "var(--paper)" }}>
-        <div className="text-center mb-5">
-          <Store size={28} style={{ color: "var(--stamp)" }} className="mx-auto mb-2" />
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 22 }}>দোকানের হিসাব</div>
-          <div className="text-sm mt-1" style={{ color: "var(--ink-faint)" }}>ঢুকতে ইউজারনেম ও পাসওয়ার্ড দিন</div>
+    <div
+      className="min-h-screen w-full flex items-center justify-center p-6 relative overflow-hidden"
+      style={{ background: "linear-gradient(180deg, var(--paper-edge) 0%, #F3F7FD 100%)" }}
+    >
+      {/* খাতার রুল-লাইন ব্যাকগ্রাউন্ড */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent 0, transparent 34px, var(--rule-blue) 35px)", opacity: 0.5 }}
+      />
+      <div
+        className="absolute inset-y-0 pointer-events-none"
+        style={{ left: "calc(50% - 260px)", width: 2, background: "var(--margin-red)", opacity: 0.25 }}
+      />
+
+      <style>{`
+        @keyframes gateShake { 10%,90%{transform:translateX(-1px)} 20%,80%{transform:translateX(2px)} 30%,50%,70%{transform:translateX(-4px)} 40%,60%{transform:translateX(4px)} }
+        .gate-shake { animation: gateShake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        .gate-input-wrap { display:flex; align-items:center; gap:10px; border:1.5px solid var(--ink); background:#fff; padding:10px 12px; }
+        .gate-input-wrap:focus-within { border-color: var(--tab-navy); box-shadow: 2px 2px 0 var(--tab-navy); }
+        .gate-input-wrap input { border:none; outline:none; background:transparent; width:100%; font-family:var(--font-body); color:var(--ink); font-size:15px; }
+      `}</style>
+
+      <form
+        onSubmit={tryLogin}
+        className={"w-full max-w-sm relative z-10 " + (shake ? "gate-shake" : "")}
+        style={{ background: "var(--paper)", border: "2px solid var(--ink)", boxShadow: "6px 6px 0 var(--tab-navy)" }}
+      >
+        {/* কোণার স্ট্যাম্প ব্যাজ */}
+        <div
+          className="absolute flex items-center justify-center text-center"
+          style={{
+            top: -18, right: -14, width: 76, height: 76, borderRadius: "50%",
+            border: "2.5px solid var(--stamp)", color: "var(--stamp)",
+            background: "var(--paper)", transform: "rotate(12deg)",
+            fontFamily: "var(--font-body)", fontWeight: 800, fontSize: 11, lineHeight: 1.25,
+          }}
+        >
+          সুরক্ষিত<br />প্রবেশ
         </div>
-        <div className="flex flex-col gap-2 mb-2">
-          <input
-            autoFocus className="field" placeholder="ইউজারনেম"
-            value={username} onChange={(e) => { setUsername(e.target.value); setError(""); }}
-          />
-          <input
-            type="password" className="field" placeholder="পাসওয়ার্ড"
-            value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }}
-          />
+
+        <div className="px-7 pt-8 pb-7">
+          <div className="text-center mb-6">
+            <div
+              className="mx-auto mb-3 flex items-center justify-center"
+              style={{ width: 56, height: 56, borderRadius: "50%", border: "2px solid var(--ink)", background: "var(--paper-edge)" }}
+            >
+              <Store size={26} style={{ color: "var(--tab-navy)" }} />
+            </div>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 26, color: "var(--ink)" }}>দোকানের হিসাব</div>
+            <div className="text-sm mt-1" style={{ color: "var(--ink-faint)" }}>ঢুকতে ইউজারনেম ও পাসওয়ার্ড দিন</div>
+          </div>
+
+          <div className="flex flex-col gap-3 mb-1">
+            <label className="gate-input-wrap">
+              <UserRound size={17} style={{ color: "var(--ink-faint)" }} />
+              <input
+                autoFocus placeholder="ইউজারনেম"
+                value={username} onChange={(e) => { setUsername(e.target.value); setError(""); }}
+              />
+            </label>
+            <label className="gate-input-wrap">
+              <KeyRound size={17} style={{ color: "var(--ink-faint)" }} />
+              <input
+                type="password" placeholder="পাসওয়ার্ড"
+                value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }}
+              />
+            </label>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-1.5 text-sm mt-3" style={{ color: "var(--stamp)" }}>
+              <AlertTriangle size={14} /> {error}
+            </div>
+          )}
+
+          <button type="submit" className="ledger-btn ledger-btn-solid w-full justify-center mt-5 gap-2">
+            <ShieldAlert size={16} /> ঢুকুন
+          </button>
         </div>
-        {error && <div className="text-sm mb-2" style={{ color: "var(--stamp)" }}>{error}</div>}
-        <button type="submit" className="ledger-btn ledger-btn-solid w-full justify-center mt-2">ঢুকুন</button>
+
+        <div
+          className="text-center text-xs py-2.5"
+          style={{ borderTop: "1.5px solid var(--ink)", color: "var(--ink-faint)", background: "var(--paper-edge)" }}
+        >
+          শুধু অনুমোদিত ব্যবহারকারীদের জন্য
+        </div>
       </form>
     </div>
   );

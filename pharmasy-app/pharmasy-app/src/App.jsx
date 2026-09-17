@@ -3180,6 +3180,7 @@ function AppLoginGate({ children }) {
   if (unlocked) return children;
 
   return (
+    <Shell>
     <div
       className="min-h-screen w-full flex items-center justify-center p-6 relative overflow-hidden"
       style={{ background: "linear-gradient(180deg, var(--paper-edge) 0%, #F3F7FD 100%)" }}
@@ -3268,6 +3269,7 @@ function AppLoginGate({ children }) {
         </div>
       </form>
     </div>
+    </Shell>
   );
 }
 

@@ -1191,16 +1191,34 @@ function Dashboard({ products, sales, purchases, customers, suppliers, payments,
   const totalPurchase = purchases.reduce((a, p) => a + p.total, 0);
   const totalExpense = expenses.reduce((a, e) => a + e.amount, 0);
   const netEstimate = totalSales - totalPurchase - totalExpense;
-  const invoiceDue = sales.reduce((a, s) => a + (s.due || 0), 0);
-  const purchaseDueTotal = purchases.reduce((a, p) => a + (p.due || 0), 0);
+  // ✅ ফিক্স: আগে sale.due/purchase.due ফিল্ড থেকে সরাসরি যোগফল নেওয়া হতো, যেটা পরে করা payment এন্ট্রি
+  // বিয়োগ করত না। এখন customerDue()/supplierDue() ব্যবহার করা হচ্ছে, যেটা payments সঠিকভাবে বিয়োগ করে।
+  const totalReceivable = customers.reduce((a, c) => a + customerDue(c.id, sales, payments, customers), 0);
+  const totalPayable = suppliers.reduce((a, s) => a + supplierDue(s.id, purchases, payments, suppliers), 0);
+  const invoiceDue = totalReceivable;
+  const purchaseDueTotal = totalPayable;
   const stockValue = products.reduce((a, p) => a + p.stock * p.sellPrice, 0);
   const lowStock = products.filter((p) => p.stock <= (p.lowStockAt ?? 5));
   const expiring = products.filter((p) => p.expiry && daysBetween(p.expiry) <= 60).sort((a, b) => a.expiry.localeCompare(b.expiry));
-  const totalReceivable = customers.reduce((a, c) => a + customerDue(c.id, sales, payments, customers), 0);
-  const totalPayable = suppliers.reduce((a, s) => a + supplierDue(s.id, purchases, payments, suppliers), 0);
 
-  const salesDue = sales.filter((s) => s.due > 0).sort((a, b) => b.createdAt - a.createdAt).slice(0, 6);
-  const purchDue = purchases.filter((p) => p.due > 0).sort((a, b) => b.createdAt - a.createdAt).slice(0, 6);
+  // কাস্টমার/সাপ্লায়ার ভিত্তিক প্রকৃত বাকির তালিকা (payments বিয়োগ করার পর যা অবশিষ্ট থাকে)
+  // প্রিন্টের জন্য প্রতিটা কাস্টমার/সাপ্লায়ারের সবচেয়ে সাম্প্রতিক বাকি-থাকা ইনভয়েস/স্লিপও সাথে রাখা হচ্ছে।
+  const salesDue = customers
+    .map((c) => {
+      const custSales = sales.filter((s) => s.customerId === c.id && s.due > 0).sort((a, b) => b.createdAt - a.createdAt);
+      return { id: c.id, customerName: c.name, due: customerDue(c.id, sales, payments, customers), lastSale: custSales[0] || null };
+    })
+    .filter((c) => c.due > 0)
+    .sort((a, b) => b.due - a.due)
+    .slice(0, 6);
+  const purchDue = suppliers
+    .map((s) => {
+      const supPurchases = purchases.filter((p) => p.supplierId === s.id && p.due > 0).sort((a, b) => b.createdAt - a.createdAt);
+      return { id: s.id, supplierName: s.name, due: supplierDue(s.id, purchases, payments, suppliers), lastPurchase: supPurchases[0] || null };
+    })
+    .filter((s) => s.due > 0)
+    .sort((a, b) => b.due - a.due)
+    .slice(0, 6);
 
   const byDay = {};
   const start = new Date(); start.setDate(start.getDate() - 29);
@@ -1244,8 +1262,11 @@ function Dashboard({ products, sales, purchases, customers, suppliers, payments,
             {salesDue.length === 0 && <div className="p-4 text-sm" style={{ color: "var(--ink-faint)" }}>কোনো বাকি নেই।</div>}
             {salesDue.map((s, i) => (
               <div key={s.id} className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: i ? "1px solid var(--rule-blue)" : "none" }}>
-                <div><div style={{ fontWeight: 600 }}>{s.customerName}</div><div className="text-xs" style={{ color: "var(--ink-faint)" }}>#{s.invoiceNo}</div></div>
-                <div className="flex items-center gap-2"><span style={{ color: "var(--stamp)", fontWeight: 700 }}>{money(s.due)}</span><button className="ledger-btn ledger-btn-sm" onClick={() => onPrint(s)}><Printer size={13} /></button></div>
+                <div className="cursor-pointer" style={{ fontWeight: 600 }} onClick={() => setTab("customers")}>{s.customerName}</div>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: "var(--stamp)", fontWeight: 700 }}>{money(s.due)}</span>
+                  {s.lastSale && <button className="ledger-btn ledger-btn-sm" title="সর্বশেষ বাকি-থাকা ইনভয়েস প্রিন্ট করুন" onClick={() => onPrint(s.lastSale)}><Printer size={13} /></button>}
+                </div>
               </div>
             ))}
           </div>
@@ -1256,8 +1277,11 @@ function Dashboard({ products, sales, purchases, customers, suppliers, payments,
             {purchDue.length === 0 && <div className="p-4 text-sm" style={{ color: "var(--ink-faint)" }}>কোনো দেনা নেই।</div>}
             {purchDue.map((p, i) => (
               <div key={p.id} className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: i ? "1px solid var(--rule-blue)" : "none" }}>
-                <div><div style={{ fontWeight: 600 }}>{p.supplierName}</div><div className="text-xs" style={{ color: "var(--ink-faint)" }}>{p.refNo || "-"}</div></div>
-                <span style={{ color: "var(--stamp)", fontWeight: 700 }}>{money(p.due)}</span>
+                <div className="cursor-pointer" style={{ fontWeight: 600 }} onClick={() => setTab("suppliers")}>{p.supplierName}</div>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: "var(--stamp)", fontWeight: 700 }}>{money(p.due)}</span>
+                  {p.lastPurchase && <button className="ledger-btn ledger-btn-sm" title="সর্বশেষ বাকি-থাকা ক্রয় স্লিপ প্রিন্ট করুন" onClick={() => onPrint(p.lastPurchase)}><Printer size={13} /></button>}
+                </div>
               </div>
             ))}
           </div>

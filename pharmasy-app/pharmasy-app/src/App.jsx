@@ -313,13 +313,13 @@ function DokanApp({ shopCode, onShopLogout }) {
             {tab === "sales" && <SalesTab products={products} setProducts={setProducts} sales={sales} setSales={setSales} returns={returns} setReturns={setReturns} customers={customers} setCustomers={setCustomers} payments={payments} currentUser={currentUser} pushToast={pushToast} onPrint={setInvoiceSale} shopTaxRate={shopTaxRate} shopMfsNumber={shopMfsNumber} logActivity={logActivity} isOwner={isOwner} employees={employees} discountPinLimit={discountPinLimit} shifts={shifts} currentShiftId={currentShiftId} parkedSales={parkedSales} setParkedSales={setParkedSales} />}
             {tab === "purchase" && <PurchaseTab products={products} setProducts={setProducts} purchases={purchases} setPurchases={setPurchases} suppliers={suppliers} setSuppliers={setSuppliers} payments={payments} currentUser={currentUser} pushToast={pushToast} purchaseOrders={purchaseOrders} setPurchaseOrders={setPurchaseOrders} onPrint={setPurchaseSlip} logActivity={logActivity} />}
             {tab === "stock" && <StockTab products={products} setProducts={setProducts} pushToast={pushToast} onPrintLabel={setLabelProduct} writeOffs={writeOffs} setWriteOffs={setWriteOffs} suppliers={suppliers} purchaseOrders={purchaseOrders} setPurchaseOrders={setPurchaseOrders} logActivity={logActivity} />}
-            {tab === "customers" && <CustomersTab customers={customers} setCustomers={setCustomers} sales={sales} payments={payments} setPayments={setPayments} pushToast={pushToast} onPrint={setInvoiceSale} shopName={shopName} logActivity={logActivity} />}
-            {tab === "suppliers" && <SuppliersTab suppliers={suppliers} setSuppliers={setSuppliers} purchases={purchases} payments={payments} setPayments={setPayments} pushToast={pushToast} onPrint={setPurchaseSlip} logActivity={logActivity} />}
+            {tab === "customers" && <CustomersTab customers={customers} setCustomers={setCustomers} sales={sales} payments={payments} setPayments={setPayments} pushToast={pushToast} onPrint={setInvoiceSale} shopName={shopName} logActivity={logActivity} currentShiftId={currentShiftId} />}
+            {tab === "suppliers" && <SuppliersTab suppliers={suppliers} setSuppliers={setSuppliers} purchases={purchases} payments={payments} setPayments={setPayments} pushToast={pushToast} onPrint={setPurchaseSlip} logActivity={logActivity} currentShiftId={currentShiftId} />}
             {tab === "expenses" && isOwner && <ExpensesTab expenses={expenses} setExpenses={setExpenses} currentUser={currentUser} pushToast={pushToast} logActivity={logActivity} />}
             {tab === "reports" && isOwner && <ReportsTab sales={sales} purchases={purchases} products={products} expenses={expenses} writeOffs={writeOffs} setWriteOffs={setWriteOffs} payments={payments} pushToast={pushToast} logActivity={logActivity} />}
             {tab === "employees" && isOwner && <EmployeesTab employees={employees} setEmployees={setEmployees} pushToast={pushToast} logActivity={logActivity} />}
             {tab === "activityLog" && isOwner && <ActivityLogTab logs={activityLogs} employees={employees} />}
-            {tab === "shifts" && isOwner && <ShiftTab shifts={shifts} setShifts={setShifts} currentShiftId={currentShiftId} setCurrentShiftId={setCurrentShiftId} currentUser={currentUser} sales={sales} pushToast={pushToast} logActivity={logActivity} />}
+            {tab === "shifts" && isOwner && <ShiftTab shifts={shifts} setShifts={setShifts} currentShiftId={currentShiftId} setCurrentShiftId={setCurrentShiftId} currentUser={currentUser} sales={sales} payments={payments} pushToast={pushToast} logActivity={logActivity} />}
             {tab === "advanced" && isOwner && <AdvancedPharmacyTab records={advancedRecords} setRecords={setAdvancedRecords} products={products} setSales={setSales} setProducts={setProducts} purchases={purchases} sales={sales} customers={customers} employees={employees} currentUser={currentUser} pushToast={pushToast} logActivity={logActivity} />}
             {tab === "settings" && isOwner && <SettingsBackupTab
               shopCode={shopCode} shopName={shopName} setShopName={setShopName} shopPhone={shopPhone} setShopPhone={setShopPhone}
@@ -2365,7 +2365,7 @@ function WriteOffModal({ target, onClose, onSubmit }) {
 }
 
 // ---------- Customers tab ----------
-function CustomersTab({ customers, setCustomers, sales, payments, setPayments, pushToast, onPrint, shopName, logActivity = () => {} }) {
+function CustomersTab({ customers, setCustomers, sales, payments, setPayments, pushToast, onPrint, shopName, logActivity = () => {}, currentShiftId = null }) {
   const [openId, setOpenId] = useState(null);
   const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [opening, setOpening] = useState(""); const [allergies, setAllergies] = useState(""); const [group, setGroup] = useState("Retail");
   const [payAmount, setPayAmount] = useState("");
@@ -2414,7 +2414,7 @@ function CustomersTab({ customers, setCustomers, sales, payments, setPayments, p
                 {needsBankAcc && <div><label className="text-xs block" style={{ color: "var(--ink-faint)" }}>ব্যাংক অ্যাকাউন্ট নং</label><input className="field" value={bankAccNo} onChange={(e) => setBankAccNo(e.target.value)} placeholder="অ্যাকাউন্ট নম্বর" /></div>}
               </div>
             )}
-            <button className="ledger-btn ledger-btn-solid w-full justify-center" onClick={() => { const amt = Math.min(due, Math.max(0, Number(payAmount) || due)); if (amt <= 0) return; setPayments((p) => [...p, { id: uid(), type: "customer", partyId: selected.id, amount: amt, date: todayStr(), payMethod, txnNo: needsTxn ? txnNo.trim() : "", bankAccNo: needsBankAcc ? bankAccNo.trim() : "", senderNumber: needsSenderNumber ? senderNumber.trim() : "" }]); setPayAmount(""); setTxnNo(""); setBankAccNo(""); setSenderNumber(""); pushToast("পেমেন্ট রেকর্ড হয়েছে ✓"); logActivity("customer_payment", `${selected.name} থেকে ${money(amt)} আদায় (${payMethod})`, { refId: selected.id }); }}>জমা নিন</button>
+            <button className="ledger-btn ledger-btn-solid w-full justify-center" onClick={() => { const amt = Math.min(due, Math.max(0, Number(payAmount) || due)); if (amt <= 0) return; setPayments((p) => [...p, { id: uid(), type: "customer", partyId: selected.id, amount: amt, date: todayStr(), payMethod, txnNo: needsTxn ? txnNo.trim() : "", bankAccNo: needsBankAcc ? bankAccNo.trim() : "", senderNumber: needsSenderNumber ? senderNumber.trim() : "", shiftId: currentShiftId || null }]); setPayAmount(""); setTxnNo(""); setBankAccNo(""); setSenderNumber(""); pushToast("পেমেন্ট রেকর্ড হয়েছে ✓"); logActivity("customer_payment", `${selected.name} থেকে ${money(amt)} আদায় (${payMethod})`, { refId: selected.id }); }}>জমা নিন</button>
           </div>
         )}
         <SectionTitle icon={FileBarChart}>কেনাকাটার ইতিহাস</SectionTitle>
@@ -2476,7 +2476,7 @@ function CustomersTab({ customers, setCustomers, sales, payments, setPayments, p
 }
 
 // ---------- Suppliers tab ----------
-function SuppliersTab({ suppliers, setSuppliers, purchases, payments, setPayments, pushToast, onPrint, logActivity = () => {} }) {
+function SuppliersTab({ suppliers, setSuppliers, purchases, payments, setPayments, pushToast, onPrint, logActivity = () => {}, currentShiftId = null }) {
   const [openId, setOpenId] = useState(null);
   const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [opening, setOpening] = useState("");
   const [payAmount, setPayAmount] = useState("");
@@ -2517,7 +2517,7 @@ function SuppliersTab({ suppliers, setSuppliers, purchases, payments, setPayment
                 {needsBankAcc && <div><label className="text-xs block" style={{ color: "var(--ink-faint)" }}>ব্যাংক অ্যাকাউন্ট নং</label><input className="field" value={bankAccNo} onChange={(e) => setBankAccNo(e.target.value)} placeholder="অ্যাকাউন্ট নম্বর" /></div>}
               </div>
             )}
-            <button className="ledger-btn ledger-btn-navy w-full justify-center" onClick={() => { const amt = Math.min(due, Math.max(0, Number(payAmount) || due)); if (amt <= 0) return; setPayments((p) => [...p, { id: uid(), type: "supplier", partyId: selected.id, amount: amt, date: todayStr(), payMethod, txnNo: needsTxn ? txnNo.trim() : "", bankAccNo: needsBankAcc ? bankAccNo.trim() : "", senderNumber: needsSenderNumber ? senderNumber.trim() : "" }]); setPayAmount(""); setTxnNo(""); setBankAccNo(""); setSenderNumber(""); pushToast("পেমেন্ট রেকর্ড হয়েছে ✓"); logActivity("supplier_payment", `${selected.name} কে ${money(amt)} পরিশোধ (${payMethod})`, { refId: selected.id }); }}>পরিশোধ করুন</button>
+            <button className="ledger-btn ledger-btn-navy w-full justify-center" onClick={() => { const amt = Math.min(due, Math.max(0, Number(payAmount) || due)); if (amt <= 0) return; setPayments((p) => [...p, { id: uid(), type: "supplier", partyId: selected.id, amount: amt, date: todayStr(), payMethod, txnNo: needsTxn ? txnNo.trim() : "", bankAccNo: needsBankAcc ? bankAccNo.trim() : "", senderNumber: needsSenderNumber ? senderNumber.trim() : "", shiftId: currentShiftId || null }]); setPayAmount(""); setTxnNo(""); setBankAccNo(""); setSenderNumber(""); pushToast("পেমেন্ট রেকর্ড হয়েছে ✓"); logActivity("supplier_payment", `${selected.name} কে ${money(amt)} পরিশোধ (${payMethod})`, { refId: selected.id }); }}>পরিশোধ করুন</button>
           </div>
         )}
         <SectionTitle icon={FileBarChart}>ক্রয়ের ইতিহাস</SectionTitle>
@@ -2887,11 +2887,28 @@ function ActivityLogTab({ logs, employees = [] }) {
 }
 
 // ---------- ক্যাশ রেজিস্টার / শিফট মিলান ----------
-function ShiftTab({ shifts, setShifts, currentShiftId, setCurrentShiftId, currentUser, sales, pushToast, logActivity }) {
+function ShiftTab({ shifts, setShifts, currentShiftId, setCurrentShiftId, currentUser, sales, payments = [], pushToast, logActivity }) {
   const open = shifts.find((x) => x.id === currentShiftId && x.status === "open");
   const [opening, setOpening] = useState(""); const [counted, setCounted] = useState("");
   function start() { if (open || opening === "") return; const x = { id: uid(), status: "open", startedAt: Date.now(), startedBy: currentUser.name, openingCash: Number(opening) || 0 }; setShifts((v) => [x, ...v]); setCurrentShiftId(x.id); setOpening(""); logActivity("shift_start", `ওপেনিং ক্যাশ ${money(x.openingCash)}`); pushToast("শিফট শুরু হয়েছে ✓"); }
-  function end() { if (!open || counted === "") return; const shiftSales = sales.filter((x) => x.shiftId === open.id); const expected = open.openingCash + shiftSales.filter((x) => x.payMethod === "ক্যাশ").reduce((a, x) => a + (x.paid || 0), 0); const x = { ...open, status: "closed", endedAt: Date.now(), countedCash: Number(counted) || 0, expectedCash: expected, difference: (Number(counted) || 0) - expected }; setShifts((v) => v.map((y) => y.id === open.id ? x : y)); setCurrentShiftId(null); setCounted(""); logActivity("shift_end", `কাউন্টেড ${money(x.countedCash)} / সিস্টেম ${money(expected)} / পার্থক্য ${money(x.difference)}`); pushToast("শিফট শেষ ও ক্যাশ মিলানো হয়েছে ✓"); }
+  function end() {
+    if (!open || counted === "") return;
+    const shiftSales = sales.filter((x) => x.shiftId === open.id);
+    const shiftPayments = payments.filter((x) => x.shiftId === open.id && x.payMethod === "ক্যাশ");
+    // ✅ ফিক্স: আগে শুধু এই শিফটের বিক্রয় থেকে পাওয়া ক্যাশ ধরা হতো। কিন্তু শিফট চলাকালীন কাস্টমারের
+    // পুরনো বাকি ক্যাশে আদায় করলে বা সাপ্লায়ারকে ক্যাশে টাকা দিলে, সেটা ড্রয়ারের ক্যাশ বদলে দেয় ঠিকই
+    // কিন্তু আগে হিসাবে ধরা হতো না — ফলে "গণনা করা ক্যাশ" আর "প্রত্যাশিত ক্যাশ" এর মধ্যে মিথ্যা পার্থক্য
+    // দেখাত। এখন কাস্টমার-পেমেন্ট (+) ও সাপ্লায়ার-পেমেন্ট (-) দুটোই হিসাবে যোগ করা হচ্ছে।
+    const cashFromCustomers = shiftPayments.filter((x) => x.type === "customer").reduce((a, x) => a + x.amount, 0);
+    const cashToSuppliers = shiftPayments.filter((x) => x.type === "supplier").reduce((a, x) => a + x.amount, 0);
+    const expected = open.openingCash + shiftSales.filter((x) => x.payMethod === "ক্যাশ").reduce((a, x) => a + (x.paid || 0), 0) + cashFromCustomers - cashToSuppliers;
+    const x = { ...open, status: "closed", endedAt: Date.now(), countedCash: Number(counted) || 0, expectedCash: expected, difference: (Number(counted) || 0) - expected };
+    setShifts((v) => v.map((y) => y.id === open.id ? x : y));
+    setCurrentShiftId(null);
+    setCounted("");
+    logActivity("shift_end", `কাউন্টেড ${money(x.countedCash)} / সিস্টেম ${money(expected)} / পার্থক্য ${money(x.difference)}`);
+    pushToast("শিফট শেষ ও ক্যাশ মিলানো হয়েছে ✓");
+  }
   return <div><SectionTitle icon={Wallet}>ক্যাশ রেজিস্টার / শিফট মিলান</SectionTitle><div className="border-2 p-4 max-w-xl mb-6" style={{ borderColor: "var(--ink)", background: "var(--paper)" }}>{open ? <><div className="font-bold mb-2">চলমান শিফট • শুরু করেছেন {open.startedBy}</div><div className="text-sm mb-3">ওপেনিং ক্যাশ: {money(open.openingCash)}</div><div className="flex gap-2"><input type="number" className="field" placeholder="কাউন্টেড ক্যাশ" value={counted} onChange={(e) => setCounted(e.target.value)} /><button className="ledger-btn ledger-btn-solid" onClick={end}>শিফট শেষ করুন</button></div></> : <div className="flex gap-2"><input type="number" className="field" placeholder="ওপেনিং ক্যাশ" value={opening} onChange={(e) => setOpening(e.target.value)} /><button className="ledger-btn ledger-btn-solid" onClick={start}>শিফট শুরু করুন</button></div>}</div><div className="border-2" style={{ borderColor: "var(--ink)", background: "var(--paper)" }}>{shifts.map((x, i) => <div key={x.id} className="flex justify-between px-4 py-2.5 text-sm" style={{ borderTop: i ? "1px solid var(--rule-blue)" : "none" }}><span>{bnDateTime(x.startedAt)} • {x.startedBy}</span><span>{x.status === "open" ? "চলমান" : `পার্থক্য ${money(x.difference)}`}</span></div>)}</div></div>;
 }
 

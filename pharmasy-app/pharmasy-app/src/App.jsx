@@ -316,7 +316,7 @@ function DokanApp({ shopCode, onShopLogout }) {
             {tab === "customers" && <CustomersTab customers={customers} setCustomers={setCustomers} sales={sales} payments={payments} setPayments={setPayments} pushToast={pushToast} onPrint={setInvoiceSale} shopName={shopName} logActivity={logActivity} />}
             {tab === "suppliers" && <SuppliersTab suppliers={suppliers} setSuppliers={setSuppliers} purchases={purchases} payments={payments} setPayments={setPayments} pushToast={pushToast} onPrint={setPurchaseSlip} logActivity={logActivity} />}
             {tab === "expenses" && isOwner && <ExpensesTab expenses={expenses} setExpenses={setExpenses} currentUser={currentUser} pushToast={pushToast} logActivity={logActivity} />}
-            {tab === "reports" && isOwner && <ReportsTab sales={sales} purchases={purchases} products={products} expenses={expenses} writeOffs={writeOffs} setWriteOffs={setWriteOffs} pushToast={pushToast} logActivity={logActivity} />}
+            {tab === "reports" && isOwner && <ReportsTab sales={sales} purchases={purchases} products={products} expenses={expenses} writeOffs={writeOffs} setWriteOffs={setWriteOffs} payments={payments} pushToast={pushToast} logActivity={logActivity} />}
             {tab === "employees" && isOwner && <EmployeesTab employees={employees} setEmployees={setEmployees} pushToast={pushToast} logActivity={logActivity} />}
             {tab === "activityLog" && isOwner && <ActivityLogTab logs={activityLogs} employees={employees} />}
             {tab === "shifts" && isOwner && <ShiftTab shifts={shifts} setShifts={setShifts} currentShiftId={currentShiftId} setCurrentShiftId={setCurrentShiftId} currentUser={currentUser} sales={sales} pushToast={pushToast} logActivity={logActivity} />}
@@ -2605,7 +2605,7 @@ function ExpensesTab({ expenses, setExpenses, currentUser, pushToast, logActivit
 }
 
 // ---------- Reports tab ----------
-function ReportsTab({ sales, purchases, products, expenses, writeOffs = [], setWriteOffs = () => {}, pushToast = () => {}, logActivity = () => {} }) {
+function ReportsTab({ sales, purchases, products, expenses, writeOffs = [], setWriteOffs = () => {}, payments = [], pushToast = () => {}, logActivity = () => {} }) {
   const [previewImage, setPreviewImage] = useState(null);
   const [from, setFrom] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10); });
   const [to, setTo] = useState(todayStr());
@@ -2621,8 +2621,14 @@ function ReportsTab({ sales, purchases, products, expenses, writeOffs = [], setW
   const totalShipping = salesR.reduce((a, s) => a + (s.shipping || 0), 0);
   const totalExpense = expR.reduce((a, e) => a + e.amount, 0);
   const totalWriteOff = writeOffR.reduce((a, w) => a + (w.lossValue || 0), 0);
-  const saleDue = salesR.reduce((a, s) => a + (s.due || 0), 0);
-  const purchDue = purchR.reduce((a, p) => a + (p.due || 0), 0);
+  // ✅ ফিক্স: আগে শুধু sale.due/purchase.due ফিল্ডের যোগফল নেওয়া হতো, যেটা পরে করা পেমেন্ট এন্ট্রি
+  // বিয়োগ করত না (ড্যাশবোর্ডে যেই বাগ ফিক্স হয়েছিল, এখানেও একই বাগ ছিল)। এখন এই সময়সীমার মধ্যে
+  // করা পেমেন্টগুলো বিয়োগ করা হচ্ছে, যাতে বাকির সংখ্যা আসল/হালনাগাদ থাকে।
+  const paymentsR = payments.filter((p) => inRange(p.date));
+  const customerPaymentsR = paymentsR.filter((p) => p.type === "customer").reduce((a, p) => a + p.amount, 0);
+  const supplierPaymentsR = paymentsR.filter((p) => p.type === "supplier").reduce((a, p) => a + p.amount, 0);
+  const saleDue = Math.max(0, salesR.reduce((a, s) => a + (s.due || 0), 0) - customerPaymentsR);
+  const purchDue = Math.max(0, purchR.reduce((a, p) => a + (p.due || 0), 0) - supplierPaymentsR);
 
   const grossProfit = (salesR.reduce((a, s) => a + (s.subtotal ?? s.total), 0)) - purchR.reduce((a, p) => a + (p.subtotal ?? p.total), 0);
   const netProfit = grossProfit + totalShipping - totalDiscount - totalExpense - totalWriteOff;

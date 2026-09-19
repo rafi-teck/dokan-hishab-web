@@ -316,7 +316,7 @@ function DokanApp({ shopCode, onShopLogout }) {
             {tab === "customers" && <CustomersTab customers={customers} setCustomers={setCustomers} sales={sales} payments={payments} setPayments={setPayments} pushToast={pushToast} onPrint={setInvoiceSale} shopName={shopName} logActivity={logActivity} />}
             {tab === "suppliers" && <SuppliersTab suppliers={suppliers} setSuppliers={setSuppliers} purchases={purchases} payments={payments} setPayments={setPayments} pushToast={pushToast} onPrint={setPurchaseSlip} logActivity={logActivity} />}
             {tab === "expenses" && isOwner && <ExpensesTab expenses={expenses} setExpenses={setExpenses} currentUser={currentUser} pushToast={pushToast} logActivity={logActivity} />}
-            {tab === "reports" && isOwner && <ReportsTab sales={sales} purchases={purchases} products={products} expenses={expenses} writeOffs={writeOffs} />}
+            {tab === "reports" && isOwner && <ReportsTab sales={sales} purchases={purchases} products={products} expenses={expenses} writeOffs={writeOffs} setWriteOffs={setWriteOffs} pushToast={pushToast} logActivity={logActivity} />}
             {tab === "employees" && isOwner && <EmployeesTab employees={employees} setEmployees={setEmployees} pushToast={pushToast} logActivity={logActivity} />}
             {tab === "activityLog" && isOwner && <ActivityLogTab logs={activityLogs} employees={employees} />}
             {tab === "shifts" && isOwner && <ShiftTab shifts={shifts} setShifts={setShifts} currentShiftId={currentShiftId} setCurrentShiftId={setCurrentShiftId} currentUser={currentUser} sales={sales} pushToast={pushToast} logActivity={logActivity} />}
@@ -2605,7 +2605,7 @@ function ExpensesTab({ expenses, setExpenses, currentUser, pushToast, logActivit
 }
 
 // ---------- Reports tab ----------
-function ReportsTab({ sales, purchases, products, expenses, writeOffs = [] }) {
+function ReportsTab({ sales, purchases, products, expenses, writeOffs = [], setWriteOffs = () => {}, pushToast = () => {}, logActivity = () => {} }) {
   const [previewImage, setPreviewImage] = useState(null);
   const [from, setFrom] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10); });
   const [to, setTo] = useState(todayStr());
@@ -2701,15 +2701,28 @@ function ReportsTab({ sales, purchases, products, expenses, writeOffs = [] }) {
         <>
           <SectionTitle icon={Ban}>নষ্ট/ক্ষতির হিসাব (Write-offs)</SectionTitle>
           <div className="border-2 mb-8" style={{ borderColor: "var(--ink)", background: "var(--paper)" }}>
-            <div className="hidden md:grid grid-cols-5 px-4 py-2 text-sm font-bold" style={{ borderBottom: "2px solid var(--ink)", color: "var(--ink-faint)" }}>
-              <div className="col-span-2">পণ্য</div><div>তারিখ</div><div>কারণ</div><div className="text-right">ক্ষতির মূল্য</div>
+            <div className="hidden md:grid grid-cols-6 px-4 py-2 text-sm font-bold" style={{ borderBottom: "2px solid var(--ink)", color: "var(--ink-faint)" }}>
+              <div className="col-span-2">পণ্য</div><div>তারিখ</div><div>কারণ</div><div className="text-right">ক্ষতির মূল্য</div><div></div>
             </div>
             {writeOffR.map((w, i) => (
-              <div key={w.id} className="grid grid-cols-2 md:grid-cols-5 px-4 py-2.5 gap-1" style={{ borderTop: i ? "1px solid var(--rule-blue)" : "none" }}>
+              <div key={w.id} className="grid grid-cols-2 md:grid-cols-6 px-4 py-2.5 gap-1 items-center" style={{ borderTop: i ? "1px solid var(--rule-blue)" : "none" }}>
                 <div className="col-span-2">{w.productName} {w.batchNo && <span className="text-xs" style={{ color: "var(--ink-faint)" }}>({w.batchNo})</span>} <span className="text-xs" style={{ color: "var(--ink-faint)" }}>— {w.qty} {w.unit}</span></div>
                 <div className="text-sm" style={{ color: "var(--ink-faint)" }}>{bnDate(w.date)}</div>
                 <div className="text-sm">{w.reason}</div>
                 <div className="text-right font-bold" style={{ color: "var(--stamp)" }}>-{money(w.lossValue)}</div>
+                <div className="text-right">
+                  <button
+                    title="এই write-off এন্ট্রি মুছে ফেলুন"
+                    onClick={() => {
+                      if (!window.confirm(`"${w.productName}" — ${money(w.lossValue)} এর এই write-off এন্ট্রিটা মুছে ফেলতে চান? এটা স্টক বাড়াবে না, শুধু ক্ষতির হিসাব থেকে বাদ যাবে।`)) return;
+                      setWriteOffs((wo) => wo.filter((x) => x.id !== w.id));
+                      pushToast("write-off এন্ট্রি মুছে ফেলা হয়েছে", "warn");
+                      logActivity("writeoff_delete", `${w.productName} — ${money(w.lossValue)}`, { refId: w.id });
+                    }}
+                  >
+                    <Trash2 size={15} style={{ color: "var(--stamp)" }} />
+                  </button>
+                </div>
               </div>
             ))}
             <div className="px-4 py-2.5 text-right font-bold" style={{ borderTop: "2px solid var(--ink)" }}>মোট ক্ষতি: {money(totalWriteOff)}</div>
